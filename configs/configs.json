@@ -1,0 +1,12 @@
+{
+    "token": "NTIzMDIxOTg4NzpBQUdNbzZ1MjE5WG9mTHhGeF93dS1pRGY5ZzJKTXk4WmRSSQ==",
+    "dbname": "barbers",
+    "user": "sheeesh",
+    "password": "sheeesh",
+    "hostaddr": "127.0.0.1",
+    "port": "5432",
+    "helloText": "Саламалейкум, щас яйца побреем тебе",
+    "barberList": "Список барберов",
+    "freeSlots": "Доступные слоты",
+    "endPhrase": "Вы были успешно записаны"
+}
