@@ -5,7 +5,6 @@ namespace {
 
 constexpr const char* const GET_ADMIN_QUERY = "SELECT id, name, photo FROM barbers";
 constexpr const char* const GET_USER_QUERY = "SELECT id, name, telegram_id FROM users";
-constexpr const char* const GET_SLOTS_QUERY = "select slots from slots where barber_id = 1 and slot_date = '2023-05-28'";
 constexpr const int SLOTS_RESERVE = 48;
 
 /*
@@ -17,12 +16,14 @@ constexpr const int SLOTS_RESERVE = 48;
 */
 std::vector<std::string> freeTime(const std::string& slots) {
     std::vector<std::string> time;
-    time.reserve(slots.size());
-    for(int i = 0, j = 0; i <= slots.size()*30; i+=30, ++j) {
+    time.reserve(SLOTS_RESERVE);
+    for(int i = 0, j = 0; i < SLOTS_RESERVE*30; i+=30, ++j) {
         if (slots[j] == '1') {
+            std::cout << j << ' ';
             time.push_back(std::to_string(i/60) + " : " + (i%60 == 0 ? "00" : "30"));
         }
     }
+    std::cout << '\n';
     return time;
 }
 
@@ -57,10 +58,11 @@ std::vector<admin::Admin> DBImpl::getAdmins() const {
 
 std::vector<std::string> DBImpl::getSlots(const std::string& date, int barberId) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::transaction tx{*db_};
+    pqxx::work txn{*db_};
 
-    const auto& [slotsStr] = *tx.stream<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'").begin();
-    return freeTime(slotsStr);
+    std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
+    std::cout << "getSlots: " << slots << ", barberId: " << barberId <<'\n';
+    return freeTime(slots);
 }
 
 std::vector<user::User> DBImpl::getUsers() const {
@@ -94,6 +96,22 @@ void DBImpl::createRecord(int barberId, int userId, const std::string& recordsDa
     std::string query = "INSERT INTO records (barber_id, user_id, records_date, time_num) VALUES ('"+std::to_string(barberId)+"','"+std::to_string(userId)+"','"+recordsDate+"','"+std::to_string(timeNum)+"');";
     tx.exec0(query);
     tx.commit();
+}
+
+void DBImpl::updateSlots(int barberId, int timeNum, const std::string& date) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    pqxx::work txn{*db_};
+    std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
+ 
+    std::cout << "updateSlots: " << slots << ", barberId: " << barberId <<'\n';
+ 
+    slots[timeNum] = '2';
+    if (timeNum < slots.size() - 1) {
+        slots[timeNum + 1] = '2';
+    }
+ 
+    txn.exec0("update slots SET slots='"+slots+"' where barber_id="+std::to_string(barberId)+" and slot_date='"+date+"';");
+    txn.commit();
 }
 
 }

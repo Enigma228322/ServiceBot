@@ -31,7 +31,9 @@ endif()
 add_executable(bot
     src/main.cpp
     src/utils/base64.cpp
+    src/utils/shit.cpp
     src/Admin.cpp
+    src/Session.cpp
     src/User.cpp
     src/DBService/DBImpl.cpp
 )

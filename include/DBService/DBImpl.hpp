@@ -22,6 +22,8 @@ public:
     void createUser(const std::string& name, int64_t telegramId);
     void createRecord(int barberId, int userId, const std::string& recordsDate, int timeNum);
 
+    void updateSlots(int barberId, int timeNum, const std::string& date);
+
     ~DBImpl() = default;
 
 private:
