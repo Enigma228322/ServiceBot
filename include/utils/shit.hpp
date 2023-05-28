@@ -23,7 +23,7 @@ Json readConfig();
 
 std::string getToken(const Json& configs);
 
-InlineKeyboardMarkup::Ptr createStartKeyboard(const std::vector<std::string>& startButtonTexts);
+InlineKeyboardMarkup::Ptr createStartKeyboard(Json& configs);
 
 ReplyKeyboardMarkup::Ptr createAdminsKeyboard(const std::vector<admin::Admin>& admins);
 

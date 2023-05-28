@@ -87,4 +87,8 @@ void Session::thirdStage(TgBot::Message::Ptr message) {
     stage_ = 0;
 }
 
+void Session::back() {
+    stage_ = stage_ > 0 ? stage_ - 1 : 0;
+}
+
 } // namespace session

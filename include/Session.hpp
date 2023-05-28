@@ -18,6 +18,7 @@ public:
             std::unordered_map<std::string, size_t>& adminMap);
 
     void continueSession(TgBot::Message::Ptr message);
+    void back();
     void deleteSession();
 
 private:

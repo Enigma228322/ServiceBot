@@ -19,11 +19,9 @@ std::vector<std::string> freeTime(const std::string& slots) {
     time.reserve(SLOTS_RESERVE);
     for(int i = 0, j = 0; i < SLOTS_RESERVE*30; i+=30, ++j) {
         if (slots[j] == '1') {
-            std::cout << j << ' ';
             time.push_back(std::to_string(i/60) + " : " + (i%60 == 0 ? "00" : "30"));
         }
     }
-    std::cout << '\n';
     return time;
 }
 
@@ -61,7 +59,6 @@ std::vector<std::string> DBImpl::getSlots(const std::string& date, int barberId)
     pqxx::work txn{*db_};
 
     std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
-    std::cout << "getSlots: " << slots << ", barberId: " << barberId <<'\n';
     return freeTime(slots);
 }
 
@@ -102,8 +99,6 @@ void DBImpl::updateSlots(int barberId, int timeNum, const std::string& date) {
     std::lock_guard<std::mutex> lock(mutex_);
     pqxx::work txn{*db_};
     std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
- 
-    std::cout << "updateSlots: " << slots << ", barberId: " << barberId <<'\n';
  
     slots[timeNum] = '2';
     if (timeNum < slots.size() - 1) {

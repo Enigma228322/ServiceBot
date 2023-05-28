@@ -16,13 +16,13 @@ std::string getToken(const Json& configs) {
     return std::string(tokenTemp.begin(), tokenTemp.end());
 }
 
-
-InlineKeyboardMarkup::Ptr createStartKeyboard(const std::vector<std::string>& startButtonTexts) {
+InlineKeyboardMarkup::Ptr createStartKeyboard(Json& configs) {
     InlineKeyboardMarkup::Ptr keyboard = std::make_shared<InlineKeyboardMarkup>();
-    std::vector<InlineKeyboardButton::Ptr> row;
-    for(const auto& startButtonText : startButtonTexts) {
+    std::vector<std::vector<std::string>> startButtons = {{"Записаться", "new_record"}};
+    for(std::vector<std::string>& startButton : startButtons) {
         InlineKeyboardButton::Ptr button = std::make_shared<InlineKeyboardButton>();
-        button->text = startButtonText;
+        button->text = std::move(startButton[0]);
+        button->callbackData = std::move(startButton[1]);
         keyboard->inlineKeyboard.push_back({button});
     }
     return keyboard;
