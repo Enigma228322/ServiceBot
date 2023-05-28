@@ -1,4 +1,6 @@
 #include "DBService/DBImpl.hpp"
+#include "spdlog/spdlog.h"
+
 #include <iostream>
 
 namespace {
@@ -30,83 +32,136 @@ std::vector<std::string> freeTime(const std::string& slots) {
 namespace db {
 
 DBImpl::DBImpl(Json configs) {
-    std::string connectStr;
-    connectStr.reserve(1000);
-    connectStr = 
-    "dbname = " + std::string(configs["dbname"]) +
-    " user = " + std::string(configs["user"]) +
-    " password = " + std::string(configs["password"]) +
-    " hostaddr = " + std::string(configs["hostaddr"]) +
-    " port = " + std::string(configs["port"]);
+    try {
+        std::string connectStr;
+        connectStr.reserve(1000);
+        connectStr = 
+        "dbname = " + configs["dbname"].get<std::string>() +
+        " user = " + configs["user"].get<std::string>() +
+        " password = " + configs["password"].get<std::string>() +
+        " hostaddr = " + configs["hostaddr"].get<std::string>() +
+        " port = " + configs["port"].get<std::string>();
 
-    db_ = std::make_unique<pqxx::connection>(connectStr);
+        db_ = std::make_unique<pqxx::connection>(connectStr);
+    } catch (const std::exception& e) {
+        spdlog::error("Can't connect to DB: {}", e.what());
+    }
 }
 
 std::vector<admin::Admin> DBImpl::getAdmins() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::transaction tx{*db_};
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::transaction tx{*db_};
 
-    std::vector<admin::Admin> admins;
-    admins.reserve(5);
-    for (auto const &[id, name, photo] : tx.stream<long, std::string, std::string>(GET_ADMIN_QUERY)) {
-        admins.emplace_back(id, name, photo);
+        std::vector<admin::Admin> admins;
+        admins.reserve(5);
+        spdlog::debug("Get admins query: {}", GET_ADMIN_QUERY);
+        for (auto const &[id, name, photo] : tx.stream<long, std::string, std::string>(GET_ADMIN_QUERY)) {
+            admins.emplace_back(id, name, photo);
+        }
+        spdlog::debug("Admins collected successfully");
+        return admins;
+    } catch(const std::exception& e) {
+        spdlog::error("Can't collect admins: {}", e.what());
     }
-    return admins;
 }
 
 std::vector<std::string> DBImpl::getSlots(const std::string& date, int barberId) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::work txn{*db_};
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work txn{*db_};
 
-    std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
-    return freeTime(slots);
+        std::string query = "select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'";
+        spdlog::debug("get slots: {}", query);
+
+        std::string slots = txn.query_value<std::string>(query);
+        spdlog::debug("slots collected successfully");
+        return freeTime(slots);
+    } catch(const std::exception& e) {
+        spdlog::error("Can't collect slots: {}", e.what());
+    }
 }
 
 std::vector<user::User> DBImpl::getUsers() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::transaction tx{*db_};
+    try{
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::transaction tx{*db_};
 
-    std::vector<user::User> users;
-    users.reserve(5);
-    for (auto const &[id, name, telegram_id] : tx.stream<long, std::string, int64_t>(GET_USER_QUERY)) {
-        users.emplace_back(id, name, telegram_id);
+        std::vector<user::User> users;
+        users.reserve(5);
+        spdlog::debug("Get users query: {}", GET_USER_QUERY);
+        for (auto const &[id, name, telegram_id] : tx.stream<long, std::string, int64_t>(GET_USER_QUERY)) {
+            users.emplace_back(id, name, telegram_id);
+        }
+        spdlog::debug("Users collected successfully");
+        return users;
+    } catch(const std::exception& e) {
+        spdlog::error("Can't collect users: {}", e.what());
     }
-    return users;
-}
+ }
 
 int DBImpl::getUserIdByTelegramId(int64_t telegramId) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::work txn{*db_};
-    return txn.query_value<int>("SELECT id FROM users WHERE telegram_id="+std::to_string(telegramId)+";");
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work txn{*db_};
+        std::string q = "SELECT id FROM users WHERE telegram_id="+std::to_string(telegramId)+";";
+        spdlog::debug("get user by telegram id: {}", q);
+        return txn.query_value<int>(q);
+    } catch(const std::exception& e) {
+        spdlog::error("Can't get user by telegram id: {}", e.what());
+    }
 }
 
 void DBImpl::createUser(const std::string& name, int64_t telegramId) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::work tx{*db_};
-    tx.exec0("INSERT INTO users (name, telegram_id) VALUES ('" + name + "','"+std::to_string(telegramId)+"');");
-    tx.commit();
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work tx{*db_};
+        std::string q = "INSERT INTO users (name, telegram_id) VALUES ('" + name + "','"+std::to_string(telegramId)+"');";
+        spdlog::debug("Create user: {}", q);
+        tx.exec0(q);
+        tx.commit();
+        spdlog::debug("User created");
+    } catch(const std::exception& e) {
+        spdlog::error("Can't create user: {}", e.what());
+    }
 }
 
 void DBImpl::createRecord(int barberId, int userId, const std::string& recordsDate, int timeNum) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::work tx{*db_};
-    std::string query = "INSERT INTO records (barber_id, user_id, records_date, time_num) VALUES ('"+std::to_string(barberId)+"','"+std::to_string(userId)+"','"+recordsDate+"','"+std::to_string(timeNum)+"');";
-    tx.exec0(query);
-    tx.commit();
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work tx{*db_};
+        std::string query = "INSERT INTO records (barber_id, user_id, records_date, time_num) VALUES ('"+std::to_string(barberId)+"','"+std::to_string(userId)+"','"+recordsDate+"','"+std::to_string(timeNum)+"');";
+        spdlog::debug("Create record: {}", query);
+        tx.exec0(query);
+        tx.commit();
+        spdlog::debug("Record created");
+    } catch(const std::exception& e) {
+        spdlog::error("Can't create record: {}", e.what());
+    }
 }
 
 void DBImpl::updateSlots(int barberId, int timeNum, const std::string& date) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    pqxx::work txn{*db_};
-    std::string slots = txn.query_value<std::string>("select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'");
- 
-    slots[timeNum] = '2';
-    if (timeNum < slots.size() - 1) {
-        slots[timeNum + 1] = '2';
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work txn{*db_};
+        std::string q = "select slots from slots where barber_id = "+std::to_string(barberId)+" and slot_date = '"+date+"'";
+        spdlog::debug("get slots: {}", q);
+        std::string slots = txn.query_value<std::string>(q);
+        spdlog::debug("Got slots");
+    
+        slots[timeNum] = '2';
+        if (timeNum < slots.size() - 1) {
+            slots[timeNum + 1] = '2';
+        }
+    
+        q = "update slots SET slots='"+slots+"' where barber_id="+std::to_string(barberId)+" and slot_date='"+date+"';";
+        spdlog::debug("Update slots: {}", q);
+        txn.exec0(q);
+        txn.commit();
+        spdlog::debug("Slots updated");
+    } catch(const std::exception& e) {
+        spdlog::error("Can't update slots: {}", e.what());
     }
- 
-    txn.exec0("update slots SET slots='"+slots+"' where barber_id="+std::to_string(barberId)+" and slot_date='"+date+"';");
-    txn.commit();
 }
 
 }

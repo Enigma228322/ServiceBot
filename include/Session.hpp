@@ -17,14 +17,14 @@ public:
             std::vector<admin::Admin>& admins,
             std::unordered_map<std::string, size_t>& adminMap);
 
-    void continueSession(TgBot::Message::Ptr message);
+    void continueSession(TgBot::Message::Ptr message, const Json& configs);
     void back();
     void deleteSession();
 
 private:
-    void firstStage(TgBot::Message::Ptr message);
-    void secondStage(TgBot::Message::Ptr message);
-    void thirdStage(TgBot::Message::Ptr message);
+    void firstStage(TgBot::Message::Ptr message, const Json& configs);
+    void secondStage(TgBot::Message::Ptr message, const Json& configs);
+    void thirdStage(TgBot::Message::Ptr message, const Json& configs);
 
     int stage_{0};
     admin::Admin choosenAdmin_;

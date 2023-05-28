@@ -1,10 +1,10 @@
 version: '3'
 services:
-    app:
-        image: app:latest
-        user: root
-        volumes:
-            - ../barbershop:/home:rw
+    # app:
+    #     image: app:latest
+    #     user: root
+    #     volumes:
+    #         - ../barbershop:/home:rw
 
     postgres:
         image: postgres:15

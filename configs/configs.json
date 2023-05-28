@@ -5,8 +5,18 @@
     "password": "sheeesh",
     "hostaddr": "127.0.0.1",
     "port": "5432",
-    "helloText": "Саламалейкум, щас яйца побреем тебе",
+    "hello": "Саламалейкум, щас яйца побреем тебе",
     "barberList": "Список барберов",
     "freeSlots": "Доступные слоты",
-    "endPhrase": "Вы были успешно записаны"
+    "endPhrase": "Вы были успешно записаны",
+    "adminUsernames": ["welldone228"],
+    "newRecord": {
+        "text": "Записаться",
+        "command": "new_record"
+    },
+    "back": {
+        "text": "Назад",
+        "command": "back"
+    },
+    "startCommand": "start"
 }

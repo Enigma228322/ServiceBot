@@ -28,6 +28,10 @@ if (CURL_FOUND)
     add_definitions(-DHAVE_CURL)
 endif()
 
+if(SPDLOG_BUILD_EXAMPLE_HO)
+    target_link_libraries(bot PRIVATE spdlog::spdlog_header_only)
+endif()
+
 add_executable(bot
     src/main.cpp
     src/utils/base64.cpp

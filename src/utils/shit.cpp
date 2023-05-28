@@ -11,14 +11,16 @@ Json readConfig() {
 }
 
 std::string getToken(const Json& configs) {
-    std::string encodedToken = configs["token"];
-    std::vector<BYTE> tokenTemp = base64_decode(encodedToken);
+    std::vector<BYTE> tokenTemp = base64_decode(configs["token"].get<std::string>());
     return std::string(tokenTemp.begin(), tokenTemp.end());
 }
 
 InlineKeyboardMarkup::Ptr createStartKeyboard(Json& configs) {
     InlineKeyboardMarkup::Ptr keyboard = std::make_shared<InlineKeyboardMarkup>();
-    std::vector<std::vector<std::string>> startButtons = {{"Записаться", "new_record"}};
+    std::vector<std::vector<std::string>> startButtons = {
+        {configs["newRecord"]["text"].get<std::string>(),
+        configs["newRecord"]["command"].get<std::string>()}
+    };
     for(std::vector<std::string>& startButton : startButtons) {
         InlineKeyboardButton::Ptr button = std::make_shared<InlineKeyboardButton>();
         button->text = std::move(startButton[0]);

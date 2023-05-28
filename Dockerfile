@@ -10,7 +10,9 @@ FROM gcc:latest as build
 RUN apt-get update && \
     apt-get install -y \
     libpqxx-dev \
+    libspdlog-dev \
     libcurl4-openssl-dev \
+    libboost-all-dev \
     cmake
 
 # RUN wget -O boost_1_61_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.61.0/boost_1_61_0.tar.gz/download && \
