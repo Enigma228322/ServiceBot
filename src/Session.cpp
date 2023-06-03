@@ -37,7 +37,7 @@ void Session::deleteSession() {
 }
 
 void Session::firstStage(TgBot::Message::Ptr message, const Json& configs) {
-    {
+    try {
         spdlog::info("{}: 1st stage", message->from->username);
         std::lock_guard<std::mutex> lock(cacheMutex_);
         if (admins_.empty()) {
@@ -49,60 +49,70 @@ void Session::firstStage(TgBot::Message::Ptr message, const Json& configs) {
         for(const auto& admin : admins_) {
             spdlog::debug("{}: barber", admin.name_);
         }
+        ++stage_;
+    } catch(const std::exception& e) {
+        spdlog::error("1d stage: {}", e.what());
     }
-    ++stage_;
 }
 
 void Session::secondStage(TgBot::Message::Ptr message, const Json& configs) {
-    if (message->text.empty()) {
-        spdlog::error("{}: 2d stage empty text", message->from->username);
-        stage_ = 0;
-        return;
-    }
-
-    spdlog::info("{}: 2d stage", message->from->username);
-    std::lock_guard<std::mutex> lock(cacheMutex_);
-    auto findIt = adminMap_.find(message->text);
-    if (findIt == adminMap_.end()) {
-        shit::updateAdminsCache(db_, admins_, adminMap_);
-        spdlog::info("{}: 2d stage, update admins cache", message->from->username);
-    } else {
-        int ind = findIt->second;
-        if (admins_.size() <= ind) {
-            spdlog::error("{}: Admins size greater than found index", message->from->username);
+    try {
+        if (message->text.empty()) {
+            spdlog::error("{}: 2d stage empty text", message->from->username);
+            stage_ = 0;
             return;
         }
-        choosenAdmin_ = admins_[ind];
-        std::string currentDate = shit::timestampToDate(message->date);
-        auto times = db_->getSlots(currentDate, choosenAdmin_.id_);
-        bot_.getApi().sendMessage(message->chat->id, configs["freeSlots"].get<std::string>(), false, 0, shit::createSlotsKeyboard(times), "Markdown");
-        spdlog::info("{}: 2d stage, sent free slots", message->from->username);
 
-        ++stage_;
-        return;
+        spdlog::info("{}: 2d stage", message->from->username);
+        std::lock_guard<std::mutex> lock(cacheMutex_);
+        auto findIt = adminMap_.find(message->text);
+        if (findIt == adminMap_.end()) {
+            shit::updateAdminsCache(db_, admins_, adminMap_);
+            spdlog::info("{}: 2d stage, update admins cache", message->from->username);
+        } else {
+            int ind = findIt->second;
+            if (admins_.size() <= ind) {
+                spdlog::error("{}: Admins size greater than found index", message->from->username);
+                return;
+            }
+            choosenAdmin_ = admins_[ind];
+            std::string currentDate = shit::timestampToDate(message->date);
+            auto times = db_->getSlots(currentDate, choosenAdmin_.id_);
+            bot_.getApi().sendMessage(message->chat->id, configs["freeSlots"].get<std::string>(), false, 0, shit::createSlotsKeyboard(times), "Markdown");
+            spdlog::info("{}: 2d stage, sent free slots", message->from->username);
+
+            ++stage_;
+            return;
+        }
+    } catch(const std::exception& e) {
+        spdlog::error("2d stage: {}", e.what());
     }
 }
 
 void Session::thirdStage(TgBot::Message::Ptr message, const Json& configs) {
-    if (message->text.empty()) {
-        spdlog::error("{}: 3d stage empty text", message->from->username);
+    try {
+        if (message->text.empty()) {
+            spdlog::error("{}: 3d stage empty text", message->from->username);
+            stage_ = 0;
+            return;
+        }
+        spdlog::info("{}: 3d stage", message->from->username);
+        int userId = db_->getUserIdByTelegramId(message->from->id);
+        std::string date = shit::timestampToDate(message->date);
+        int slotNum = shit::slotTimeToInt(message->text);
+
+        db_->updateSlots(choosenAdmin_.id_, slotNum, date);
+        spdlog::info("{}: 3d stage, updated slots", message->from->username);
+
+        db_->createRecord(choosenAdmin_.id_, userId, date, slotNum);
+        spdlog::info("{}: 3d stage, record created", message->from->username);
+        bot_.getApi().sendMessage(message->chat->id, configs["endPhrase"].get<std::string>(), false, 0, shit::removeKeyBoard(), "Markdown");
+        spdlog::info("{}: 3d stage, sent end phrase", message->from->username);
+
         stage_ = 0;
-        return;
+    } catch(const std::exception& e) {
+        spdlog::error("3d stage: {}", e.what());
     }
-    spdlog::info("{}: 3d stage", message->from->username);
-    int userId = db_->getUserIdByTelegramId(message->from->id);
-    std::string date = shit::timestampToDate(message->date);
-    int slotNum = shit::slotTimeToInt(message->text);
-
-    db_->updateSlots(choosenAdmin_.id_, slotNum, date);
-    spdlog::info("{}: 3d stage, updated slots", message->from->username);
-
-    db_->createRecord(choosenAdmin_.id_, userId, date, slotNum);
-    spdlog::info("{}: 3d stage, record created", message->from->username);
-    bot_.getApi().sendMessage(message->chat->id, configs["endPhrase"].get<std::string>(), false, 0, shit::removeKeyBoard(), "Markdown");
-    spdlog::info("{}: 3d stage, sent end phrase", message->from->username);
-
-    stage_ = 0;
 }
 
 void Session::back() {

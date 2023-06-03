@@ -1,0 +1,11 @@
+CREATE TABLE barbers ( id SERIAL PRIMARY KEY, name TEXT);
+INSERT INTO barbers (name) VALUES ('Chingiz');
+INSERT INTO barbers (name) VALUES ('Gafur');
+CREATE TABLE users ( id SERIAL PRIMARY KEY, name TEXT, telegram_id INTEGER);
+-- INSERT INTO users (name, telegram_id) VALUES ('Vildan', 228322);
+-- INSERT INTO users (name, telegram_id) VALUES ('Rusya', 123321);
+CREATE TABLE records ( id SERIAL PRIMARY KEY, barber_id integer REFERENCES barbers (id), user_id integer REFERENCES users (id), records_date DATE );
+create table slots (id serial primary key, slot_date date, slots char(48) default '000000000000000000111111111111111111000000000000' not null, barber_id integer REFERENCES barbers (id));
+ALTER TABLE slots ADD UNIQUE (slot_date, barber_id);
+insert into slots (slot_date, barber_id) values ('2023-05-28', 1);
+insert into slots (slot_date, slots, barber_id) values ('2023-05-28', '000000000000000000000001111111111111000000000000', 2);

@@ -1,7 +1,9 @@
-#include "DBService/DBImpl.hpp"
-#include "spdlog/spdlog.h"
-
 #include <iostream>
+
+#include "DBService/DBImpl.hpp"
+#include "utils/shit.hpp"
+
+#include "spdlog/spdlog.h"
 
 namespace {
 
@@ -161,6 +163,36 @@ void DBImpl::updateSlots(int barberId, int timeNum, const std::string& date) {
         spdlog::debug("Slots updated");
     } catch(const std::exception& e) {
         spdlog::error("Can't update slots: {}", e.what());
+    }
+}
+
+void DBImpl::dropRecord(int userId) const {
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pqxx::work tx{*db_};
+        std::string q = "delete from records where user_id="+std::to_string(userId)+";";
+        spdlog::debug("Delete records: {}", q);
+        tx.exec0(q);
+        tx.commit();
+        spdlog::debug("Delete records");
+    } catch(const std::exception& e) {
+        spdlog::error("Can't create user: {}", e.what());
+    }
+}
+
+void DBImpl::createSlot(const std::vector<std::string>& nextDates, int adminId) {
+    try {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for(const auto& nextDate : nextDates) {
+            pqxx::work tx{*db_};
+            std::string q = "insert into slots (slots,slot_date,barber_id) values ('"+shit::DEFAULT_SLOTS+"','"+nextDate+"',"+std::to_string(adminId)+");";
+            spdlog::debug("Create new slots: {}", q);
+            tx.exec0(q);
+            tx.commit();
+            spdlog::debug("Slot created");
+        }
+    } catch(const std::exception& e) {
+        spdlog::error("Can't create slots: {}", e.what());
     }
 }
 

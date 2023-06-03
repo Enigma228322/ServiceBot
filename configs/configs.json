@@ -18,5 +18,6 @@
         "text": "Назад",
         "command": "back"
     },
-    "startCommand": "start"
+    "startCommand": "start",
+    "createNextWorkDaysNumber": 5
 }

@@ -97,4 +97,33 @@ std::string timestampToDate(time_t unix_timestamp)
     return time_buf;
 }
 
+void createWorkDaysInDB(bool scheduleCreated,
+                        std::unique_ptr<scheduler::Scheduler>& scheduler,
+                        std::shared_ptr<db::DB>& db,
+                        const TgBot::Message::Ptr& message,
+                        const std::vector<admin::Admin> admins,
+                        const Json& configs) {
+    if (scheduleCreated) {
+        return;
+    }
+    scheduler = std::make_unique<scheduler::SchedulerImpl>(db, message->date);
+    for(const auto& admin : admins) {
+        scheduler->createFutureWorkDaysFromTomorrow(configs["createNextWorkDaysNumber"].get<int>(), admin.id_);
+    }
+    scheduleCreated = true;
+}
+
+void createUser(std::vector<user::User>& users,
+                const TgBot::Message::Ptr& message,
+                std::shared_ptr<db::DB>& db) {
+    auto it = std::find_if(users.begin(), users.end(), [mid = message->chat->id](const user::User& user){
+        return user.telegram_id_ == mid;
+    });
+    if (it == users.end()) {
+        user::User user(shit::SERIAL_ID, message->chat->firstName+' '+message->chat->lastName, message->chat->id);
+        db->createUser(user.name_, user.telegram_id_);
+        users.push_back(std::move(user));
+    }
+}
+
 } // namespace shit

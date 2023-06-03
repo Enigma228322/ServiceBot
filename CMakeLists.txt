@@ -40,6 +40,7 @@ add_executable(bot
     src/Session.cpp
     src/User.cpp
     src/DBService/DBImpl.cpp
+    src/Scheduler/SchedulerImpl.cpp
 )
 
 include_directories(

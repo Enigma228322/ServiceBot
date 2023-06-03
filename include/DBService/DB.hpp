@@ -16,8 +16,11 @@ public:
 
     virtual void createUser(const std::string& name, int64_t telegramId) = 0;
     virtual void createRecord(int barberId, int userId, const std::string& recordsDate, int timeNum) = 0;
+    virtual void createSlot(const std::vector<std::string>& nextDates, int adminId) = 0;
 
     virtual void updateSlots(int barberId, int timeNum, const std::string& date) = 0;
+
+    virtual void dropRecord(int userId) const = 0;
 };
 
 } //namespace db
