@@ -19,5 +19,6 @@
         "command": "back"
     },
     "startCommand": "start",
-    "createNextWorkDaysNumber": 5
+    "createNextWorkDaysNumber": 10,
+    "nextWorkDays": 5
 }

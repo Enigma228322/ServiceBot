@@ -1,5 +1,7 @@
 #include "utils/shit.hpp"
 
+#include "spdlog/spdlog.h"
+
 namespace shit {
 
 Json readConfig() {
@@ -98,7 +100,7 @@ std::string timestampToDate(time_t unix_timestamp)
 }
 
 void createWorkDaysInDB(bool scheduleCreated,
-                        std::unique_ptr<scheduler::Scheduler>& scheduler,
+                        std::shared_ptr<scheduler::Scheduler>& scheduler,
                         std::shared_ptr<db::DB>& db,
                         const TgBot::Message::Ptr& message,
                         const std::vector<admin::Admin> admins,
@@ -106,7 +108,8 @@ void createWorkDaysInDB(bool scheduleCreated,
     if (scheduleCreated) {
         return;
     }
-    scheduler = std::make_unique<scheduler::SchedulerImpl>(db, message->date);
+    scheduler = std::make_shared<scheduler::SchedulerImpl>(db, message->date);
+    spdlog::info("Initialize scheduler");
     for(const auto& admin : admins) {
         scheduler->createFutureWorkDaysFromTomorrow(configs["createNextWorkDaysNumber"].get<int>(), admin.id_);
     }

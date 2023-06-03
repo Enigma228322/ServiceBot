@@ -180,17 +180,16 @@ void DBImpl::dropRecord(int userId) const {
     }
 }
 
-void DBImpl::createSlot(const std::vector<std::string>& nextDates, int adminId) {
+void DBImpl::createSlot(const std::string& nextDate, int adminId) {
     try {
         std::lock_guard<std::mutex> lock(mutex_);
-        for(const auto& nextDate : nextDates) {
-            pqxx::work tx{*db_};
-            std::string q = "insert into slots (slots,slot_date,barber_id) values ('"+shit::DEFAULT_SLOTS+"','"+nextDate+"',"+std::to_string(adminId)+");";
-            spdlog::debug("Create new slots: {}", q);
-            tx.exec0(q);
-            tx.commit();
-            spdlog::debug("Slot created");
-        }
+        pqxx::work tx{*db_};
+
+        std::string q = "insert into slots (slots,slot_date,barber_id) values ('"+shit::DEFAULT_SLOTS+"','"+nextDate+"',"+std::to_string(adminId)+");";
+        spdlog::debug("Create new slots: {}", q);
+        tx.exec0(q);
+        tx.commit();
+        spdlog::debug("Slot created");
     } catch(const std::exception& e) {
         spdlog::error("Can't create slots: {}", e.what());
     }

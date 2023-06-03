@@ -21,7 +21,7 @@ public:
 
     void createUser(const std::string& name, int64_t telegramId) override;
     void createRecord(int barberId, int userId, const std::string& recordsDate, int timeNum) override;
-    void createSlot(const std::vector<std::string>& nextDates, int adminId) override;
+    void createSlot(const std::string& nextDates, int adminId) override;
 
     void updateSlots(int barberId, int timeNum, const std::string& date) override;
 

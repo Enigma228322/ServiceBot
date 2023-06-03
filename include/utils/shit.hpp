@@ -43,7 +43,7 @@ int slotTimeToInt(const std::string& slot);
 std::string timestampToDate(time_t unix_timestamp);
 
 void createWorkDaysInDB(bool scheduleCreated,
-                        std::unique_ptr<scheduler::Scheduler>& scheduler,
+                        std::shared_ptr<scheduler::Scheduler>& scheduler,
                         std::shared_ptr<db::DB>& db,
                         const TgBot::Message::Ptr& message,
                         const std::vector<admin::Admin> admins,

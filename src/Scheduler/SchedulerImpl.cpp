@@ -16,20 +16,21 @@ SchedulerImpl::SchedulerImpl(std::shared_ptr<db::DB> db, time_t todayTimestamp) 
 std::vector<std::string> SchedulerImpl::showFreeSlotDates(time_t todayTimestamp, int nextDaysNum, int adminId) {
     std::vector<std::string> dates;
     dates.reserve(nextDaysNum + 1);
+    spdlog::debug("showFreeSlotDates({},{},{})", todayTimestamp, nextDaysNum, adminId);
     for(int i = 0; i <= nextDaysNum; ++i) {
         std::string date = shit::timestampToDate(todayTimestamp_ + (i + 1) * DAY_SECONDS);
-        if (!db_->getSlots(date, adminId).empty()) {
+        std::vector<std::string> slots = db_->getSlots(date, adminId);
+        if (!slots.empty()) {
             dates.push_back(date);
         }
     }
+    spdlog::debug("showFreeSlotDates({},{},{})", todayTimestamp, nextDaysNum, adminId);
     return dates;
 }
 
 void SchedulerImpl::createFutureWorkDaysFromTomorrow(int nextDaysNum, int adminId) {
-    std::vector<std::string> nextDates(nextDaysNum);
     for(int i = 0; i < nextDaysNum; ++i) {
-        nextDates[i] = shit::timestampToDate(todayTimestamp_ + (i + 1) * DAY_SECONDS);
-        spdlog::debug("date {}: {}", i, nextDates[i]);
+        const std::string& nextDate = shit::timestampToDate(todayTimestamp_ + (i + 1) * DAY_SECONDS);
+        db_->createSlot(nextDate, adminId);
     }
-    db_->createSlot(nextDates, adminId);
 }

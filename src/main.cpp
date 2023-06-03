@@ -12,6 +12,27 @@
 using namespace TgBot;
 using Json = nlohmann::json;
 
+namespace {
+
+void handleAnyMessage(const TgBot::Message::Ptr& message,
+                std::mutex& cacheMutex,
+                TgBot::Bot& bot,
+                std::shared_ptr<scheduler::Scheduler>& scheduler,
+                std::shared_ptr<db::DB>& db,
+                const Json& configs,
+                std::vector<admin::Admin>& admins,
+                std::unordered_map<std::string, size_t>& adminMap,
+                std::unordered_map<int64_t, std::unique_ptr<session::Session>>& sessions) {
+    auto sessionIt = sessions.find(message->chat->id);
+    if (sessionIt == sessions.end()) {
+        spdlog::warn("{}: Session isn't exist, create at 'Any message' event", message->from->username);
+        sessions[message->chat->id] = std::make_unique<session::Session>(message->chat->id, cacheMutex, bot, scheduler, db, admins, adminMap);
+    }
+    sessions[message->chat->id]->continueSession(std::move(message), configs);
+}
+
+} // namespace
+
 int main() {
     spdlog::set_level(spdlog::level::debug);
     spdlog::debug("Initialization started");
@@ -23,7 +44,7 @@ int main() {
     spdlog::debug("DB connected");
     std::mutex cacheMutex_;
 
-    std::unique_ptr<scheduler::Scheduler> scheduler;
+    std::shared_ptr<scheduler::Scheduler> scheduler;
     bool scheduleCreated = false;
 
     std::vector<user::User> users_;
@@ -47,43 +68,24 @@ int main() {
 
     bot.getEvents().onCallbackQuery([&bot, &sessions_, &configs](CallbackQuery::Ptr query) {
         if (StringTools::startsWith(query->data, configs["back"]["command"].get<std::string>())) {
-            spdlog::info("{}: pressed back", query->message->from->username);
-            int64_t tgId = query->message->chat->id;
-            auto sessionIt = sessions_.find(tgId);
-            if (sessionIt != sessions_.end()) {
-                sessions_[tgId]->back();
-                sessions_[tgId]->continueSession(std::move(query->message), configs);
-            } else {
-                bot.getApi().sendMessage(query->message->chat->id, "Начальная точка", false, 0, shit::createStartKeyboard(configs), "Markdown");
-            }
         }
     });
 
-    bot.getEvents().onCallbackQuery([&bot,  &db, &admins_, &adminMap_, &users_, &cacheMutex_, &sessions_, &configs](CallbackQuery::Ptr query) {
+    bot.getEvents().onCallbackQuery([&bot,  &db, &admins_, &adminMap_, &users_, &cacheMutex_, &sessions_, &configs, &scheduler](CallbackQuery::Ptr query) {
         if (StringTools::startsWith(query->data, configs["newRecord"]["command"].get<std::string>())) {
             spdlog::info("{}: pressed new_record", query->message->from->username);
-            int64_t tgId = query->message->chat->id;
-            auto sessionIt = sessions_.find(tgId);
-            if (sessionIt == sessions_.end()) {
-                sessions_[tgId] = std::make_unique<session::Session>(query->message->chat->id, cacheMutex_, bot, db, admins_, adminMap_);
-            }
-            sessions_[tgId]->continueSession(std::move(query->message), configs);
+            handleAnyMessage(query->message, cacheMutex_, bot, scheduler, db, configs, admins_, adminMap_, sessions_);
         }
     });
 
-    bot.getEvents().onAnyMessage([&bot, &db, &admins_, &adminMap_, &users_, &cacheMutex_, &sessions_, &configs](TgBot::Message::Ptr message) {
+    bot.getEvents().onAnyMessage([&bot, &db, &admins_, &adminMap_, &users_, &cacheMutex_, &sessions_, &configs, &scheduler](TgBot::Message::Ptr message) {
         if (StringTools::startsWith(message->text, "/start")
         || StringTools::startsWith(message->text, configs["back"]["command"].get<std::string>())
         || StringTools::startsWith(message->text, configs["newRecord"]["command"].get<std::string>())) {
             return;
         }
         spdlog::info("{}: pressed new_record", message->from->username);
-        auto sessionIt = sessions_.find(message->chat->id);
-        if (sessionIt == sessions_.end()) {
-            spdlog::warn("{}: Session isn't exist, create at 'Any message' event", message->from->username);
-            sessions_[message->chat->id] = std::make_unique<session::Session>(message->chat->id, cacheMutex_, bot, db, admins_, adminMap_);
-        }
-        sessions_[message->chat->id]->continueSession(std::move(message), configs);
+        handleAnyMessage(message, cacheMutex_, bot, scheduler, db, configs, admins_, adminMap_, sessions_);
     });
 
     try {
