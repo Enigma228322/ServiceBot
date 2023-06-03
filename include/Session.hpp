@@ -34,6 +34,7 @@ private:
     int stage_{DEFAULT_STAGE};
     admin::Admin choosenAdmin_;
     int64_t telegramId_;
+    std::string currentDate_;
 
     std::shared_ptr<scheduler::Scheduler> scheduler_;
     std::shared_ptr<db::DB> db_;

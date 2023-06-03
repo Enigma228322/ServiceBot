@@ -111,9 +111,9 @@ void Session::secondStage(TgBot::Message::Ptr message, const Json& configs) {
 
         spdlog::info("{}: {} stage", message->from->username, stage_);
         std::lock_guard<std::mutex> lock(cacheMutex_);
+        currentDate_ = message->text;
 
-        std::string currentDate = message->text;
-        auto times = db_->getSlots(currentDate, choosenAdmin_.id_);
+        auto times = db_->getSlots(currentDate_, choosenAdmin_.id_);
         bot_.getApi().sendMessage(message->chat->id, configs["freeSlots"].get<std::string>(), false, 0, shit::createSlotsKeyboard(times), "Markdown");
         spdlog::info("{}: {} stage, sent free slots", message->from->username, stage_);
 
@@ -133,13 +133,12 @@ void Session::thirdStage(TgBot::Message::Ptr message, const Json& configs) {
         }
         spdlog::info("{}: {} stage", message->from->username, stage_);
         int userId = db_->getUserIdByTelegramId(message->from->id);
-        std::string date = shit::timestampToDate(message->date);
         int slotNum = shit::slotTimeToInt(message->text);
 
-        db_->updateSlots(choosenAdmin_.id_, slotNum, date);
+        db_->updateSlots(choosenAdmin_.id_, slotNum, currentDate_);
         spdlog::info("{}: {} stage, updated slots", message->from->username, stage_);
 
-        db_->createRecord(choosenAdmin_.id_, userId, date, slotNum);
+        db_->createRecord(choosenAdmin_.id_, userId, currentDate_, slotNum);
         spdlog::info("{}: {} stage, record created", message->from->username, stage_);
         bot_.getApi().sendMessage(message->chat->id, configs["endPhrase"].get<std::string>(), false, 0, shit::removeKeyBoard(), "Markdown");
         spdlog::info("{}: {} stage, sent end phrase", message->from->username, stage_);
